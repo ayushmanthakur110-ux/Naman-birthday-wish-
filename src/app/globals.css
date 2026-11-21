@@ -1,0 +1,231 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-onest), "Onest Fallback", system-ui, sans-serif;
+  --font-mono: ui-monospace, monospace;
+  --font-heading: var(--font-onest), "Onest Fallback", system-ui, sans-serif;
+  --font-hindi: var(--font-tiro), var(--font-onest), serif;
+  --color-surface-base: var(--surface-base);
+  --color-surface-raised: var(--surface-raised);
+  --color-surface-strong: var(--surface-strong);
+  --color-text-primary: var(--text-primary);
+  --color-text-secondary: var(--text-secondary);
+  --color-text-inverse: var(--text-inverse);
+  --color-border-strong: var(--border-strong);
+  --color-accent-ember: var(--accent-ember);
+  --color-accent-flare: var(--accent-flare);
+  --color-accent-ion: var(--accent-ion);
+  --radius-token-xs: 6.13px;
+  --radius-token-sm: 10px;
+  --radius-token-md: 12px;
+  --radius-token-lg: 14px;
+  --radius-token-xl: 20px;
+  --shadow-token-1: rgba(255, 255, 255, 0.06) 0px 1px 0px 0px inset;
+  --shadow-token-2: rgba(255, 255, 255, 0.08) 0px 1px 1px 0px inset;
+  --shadow-token-3: rgba(255, 255, 255, 0.06) 0px 0px 0px 1px inset, rgba(0, 0, 0, 0.25) 0px 8px 24px -18px;
+  --shadow-token-4: rgba(255, 255, 255, 0.55) 0px 1px 0px 0px inset, rgba(0, 0, 0, 0.12) 0px -1px 0px 0px inset, rgba(192, 206, 242, 0.42) 0px 8px 22px -12px;
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-chart-5: var(--chart-5);
+  --color-chart-4: var(--chart-4);
+  --color-chart-3: var(--chart-3);
+  --color-chart-2: var(--chart-2);
+  --color-chart-1: var(--chart-1);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
+}
+
+:root {
+  --background: oklch(1 0 0);
+  --foreground: oklch(0.145 0 0);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.145 0 0);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.145 0 0);
+  --primary: oklch(0.205 0 0);
+  --primary-foreground: oklch(0.985 0 0);
+  --secondary: oklch(0.97 0 0);
+  --secondary-foreground: oklch(0.205 0 0);
+  --muted: oklch(0.97 0 0);
+  --muted-foreground: oklch(0.556 0 0);
+  --accent: oklch(0.97 0 0);
+  --accent-foreground: oklch(0.205 0 0);
+  --destructive: oklch(0.577 0.245 27.325);
+  --border: oklch(0.922 0 0);
+  --input: oklch(0.922 0 0);
+  --ring: oklch(0.708 0 0);
+  --chart-1: oklch(0.87 0 0);
+  --chart-2: oklch(0.556 0 0);
+  --chart-3: oklch(0.439 0 0);
+  --chart-4: oklch(0.371 0 0);
+  --chart-5: oklch(0.269 0 0);
+  --radius: 0.625rem;
+  --sidebar: oklch(0.985 0 0);
+  --sidebar-foreground: oklch(0.145 0 0);
+  --sidebar-primary: oklch(0.205 0 0);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.97 0 0);
+  --sidebar-accent-foreground: oklch(0.205 0 0);
+  --sidebar-border: oklch(0.922 0 0);
+  --sidebar-ring: oklch(0.708 0 0);
+}
+
+.dark {
+  --background: oklch(0.145 0 0);
+  --foreground: oklch(0.985 0 0);
+  --card: oklch(0.205 0 0);
+  --card-foreground: oklch(0.985 0 0);
+  --popover: oklch(0.205 0 0);
+  --popover-foreground: oklch(0.985 0 0);
+  --primary: oklch(0.922 0 0);
+  --primary-foreground: oklch(0.205 0 0);
+  --secondary: oklch(0.269 0 0);
+  --secondary-foreground: oklch(0.985 0 0);
+  --muted: oklch(0.269 0 0);
+  --muted-foreground: oklch(0.708 0 0);
+  --accent: oklch(0.269 0 0);
+  --accent-foreground: oklch(0.985 0 0);
+  --destructive: oklch(0.704 0.191 22.216);
+  --border: oklch(1 0 0 / 10%);
+  --input: oklch(1 0 0 / 15%);
+  --ring: oklch(0.556 0 0);
+  --chart-1: oklch(0.87 0 0);
+  --chart-2: oklch(0.556 0 0);
+  --chart-3: oklch(0.439 0 0);
+  --chart-4: oklch(0.371 0 0);
+  --chart-5: oklch(0.269 0 0);
+  --sidebar: oklch(0.205 0 0);
+  --sidebar-foreground: oklch(0.985 0 0);
+  --sidebar-primary: oklch(0.488 0.243 264.376);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.269 0 0);
+  --sidebar-accent-foreground: oklch(0.985 0 0);
+  --sidebar-border: oklch(1 0 0 / 10%);
+  --sidebar-ring: oklch(0.556 0 0);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+  html {
+    @apply font-sans;
+  }
+}
+/* ---------- New Era tokens (Chammu's birthday) ---------- */
+:root {
+  --surface-base: #000000;
+  --surface-raised: #1d1d1d;
+  --surface-strong: #1e1e1e;
+  --text-primary: #f5f5f5;
+  --text-secondary: #a6a6a6;
+  --text-inverse: #121212;
+  --border-strong: #ffffff;
+  --accent-ember: #ff6a3d;
+  --accent-flare: #c26bff;
+  --accent-ion: #5b7bff;
+  --motion-instant: 200ms;
+}
+
+html { background: var(--surface-base); }
+
+/* Buttons: default / hover / focus-visible / active / disabled / loading / error */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6rem;
+  min-height: 44px;
+  border-radius: 999px;
+  padding: 0.5rem 1.25rem;
+  font-size: 15.49px;
+  font-weight: 500;
+  line-height: 1;
+  cursor: pointer;
+  user-select: none;
+  transition: transform var(--motion-instant) ease, background-color var(--motion-instant) ease,
+    color var(--motion-instant) ease, box-shadow var(--motion-instant) ease, opacity var(--motion-instant) ease;
+}
+.btn:focus-visible { outline: 2px solid var(--border-strong); outline-offset: 3px; }
+.btn:active:not(:disabled) { transform: scale(0.97); }
+.btn:disabled, .btn[aria-disabled="true"] { opacity: 0.45; cursor: not-allowed; }
+.btn[data-loading="true"] { cursor: progress; opacity: 0.8; }
+.btn[data-error="true"] { box-shadow: 0 0 0 1px #ff6b6b inset; }
+
+.btn-primary {
+  background: var(--text-primary);
+  color: var(--text-inverse);
+  box-shadow: var(--shadow-token-4);
+}
+.btn-primary:hover:not(:disabled) { background: #ffffff; transform: translateY(-1px); }
+
+.btn-ghost {
+  background: var(--surface-raised);
+  color: var(--text-primary);
+  box-shadow: var(--shadow-token-3);
+}
+.btn-ghost:hover:not(:disabled) { background: var(--surface-strong); box-shadow: rgba(255,255,255,0.14) 0 0 0 1px inset; }
+
+.card {
+  background: var(--surface-raised);
+  border-radius: var(--radius-token-xl);
+  box-shadow: var(--shadow-token-3);
+}
+
+.link-quiet {
+  color: var(--text-secondary);
+  border-radius: 6px;
+  transition: color var(--motion-instant) ease;
+}
+.link-quiet:hover { color: var(--text-primary); }
+.link-quiet:focus-visible { outline: 2px solid var(--border-strong); outline-offset: 4px; color: var(--text-primary); }
+
+.text-gradient-era {
+  background: linear-gradient(90deg, var(--accent-ember), var(--accent-flare) 50%, var(--accent-ion));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* GSAP-driven elements start hidden only when JS is running (see layout). */
+.js [data-anim] { visibility: hidden; }
+
+@media (prefers-reduced-motion: reduce) {
+  .js [data-anim] { visibility: visible; }
+}
