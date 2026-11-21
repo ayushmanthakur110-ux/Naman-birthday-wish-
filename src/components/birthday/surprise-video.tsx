@@ -89,6 +89,8 @@ export const SurpriseVideo = forwardRef<SurpriseVideoHandle, { onClose?: () => v
   /** true once the video is really playing with sound; until then taps go straight to the player */
   const [live, setLive] = useState(false);
   const nudge = useRef(0);
+  /** true once frames are actually moving; until then a black cover hides YouTube's thumbnail + Shorts play icon */
+  const [playing, setPlaying] = useState(false);
   // portal target: rendered on <body> so no transformed/clipped ancestor can trap the full-screen layer
   const [portal, setPortal] = useState<HTMLElement | null>(null);
   useEffect(() => setPortal(document.body), []);
@@ -147,6 +149,7 @@ export const SurpriseVideo = forwardRef<SurpriseVideoHandle, { onClose?: () => v
               onReady: () => resolve(p),
               onStateChange: (e) => {
                 if (e.data === PLAYING && p.getCurrentTime() < 1) armed.current = true;
+                if (e.data === PLAYING) setPlaying(true);
                 if (e.data === ENDED && armed.current) close();
               },
             },
@@ -170,6 +173,7 @@ export const SurpriseVideo = forwardRef<SurpriseVideoHandle, { onClose?: () => v
       const BUFFERING = 3;
       const started = Date.now();
       setLive(false);
+      setPlaying(false);
       window.clearInterval(nudge.current);
       nudge.current = window.setInterval(() => {
         const state = p.getPlayerState();
@@ -255,6 +259,16 @@ export const SurpriseVideo = forwardRef<SurpriseVideoHandle, { onClose?: () => v
           aria-hidden="true"
           className={`absolute inset-0 z-10 bg-transparent ${live ? "" : "pointer-events-none"}`}
         />
+        {/* cover: hides YouTube's thumbnail, Shorts logo and play button until the video is really playing.
+            pointer-events-none, so if a phone blocked the start, a tap still reaches the player underneath. */}
+        <div
+          aria-hidden="true"
+          className={`pointer-events-none absolute inset-0 z-20 grid place-items-center bg-black transition-opacity duration-300 ${
+            playing ? "opacity-0" : "opacity-100"
+          }`}
+        >
+          <span className="size-8 animate-spin rounded-full border-2 border-white/15 border-t-white/70" />
+        </div>
       </div>
     </div>,
     portal,
