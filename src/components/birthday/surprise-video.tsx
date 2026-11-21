@@ -4,213 +4,86 @@ import { forwardRef, useCallback, useEffect, useImperativeHandle, useRef, useSta
 import { createPortal } from "react-dom";
 import gsap from "gsap";
 
-/** The birthday Short that plays when Chammu says "Yes". */
-const VIDEO_ID = "tZdfzED9tRg";
-
-/* ---------- minimal YouTube IFrame API types ---------- */
-type YTPlayer = {
-  playVideo(): void;
-  pauseVideo(): void;
-  stopVideo(): void;
-  seekTo(s: number, allowSeekAhead: boolean): void;
-  mute(): void;
-  unMute(): void;
-  isMuted(): boolean;
-  setVolume(v: number): void;
-  getPlayerState(): number;
-  getCurrentTime(): number;
-  getDuration(): number;
-  destroy(): void;
-};
-type YTNamespace = {
-  Player: new (
-    el: HTMLElement,
-    opts: {
-      host?: string;
-      videoId: string;
-      width?: string;
-      height?: string;
-      playerVars?: Record<string, string | number>;
-      events?: { onReady?: () => void; onStateChange?: (e: { data: number }) => void };
-    },
-  ) => YTPlayer;
-};
-declare global {
-  interface Window {
-    YT?: YTNamespace;
-    onYouTubeIframeAPIReady?: () => void;
-  }
-}
-
-let apiPromise: Promise<YTNamespace> | null = null;
-function loadYouTubeApi() {
-  if (window.YT?.Player) return Promise.resolve(window.YT);
-  apiPromise ??= new Promise((resolve) => {
-    const prev = window.onYouTubeIframeAPIReady;
-    window.onYouTubeIframeAPIReady = () => {
-      prev?.();
-      resolve(window.YT!);
-    };
-    const s = document.createElement("script");
-    s.src = "https://www.youtube.com/iframe_api";
-    s.async = true;
-    document.head.appendChild(s);
-  });
-  return apiPromise;
-}
-
-const PLAYING = 1;
-const ENDED = 0;
+/**
+ * The birthday video that plays when Chammu says "Yes".
+ * Re-encoded from the HDR HEVC export to SDR H.264 (1080×1920, 30 fps, ~5 MB) so every browser can play it.
+ */
+const VIDEO_SRC = "/video/birthday-surprise.mp4";
+const POSTER_SRC = "/video/birthday-surprise-poster.jpg";
 
 export type SurpriseVideoHandle = {
-  /** Warm the player up ahead of time (muted, paused, off-screen). */
+  /** Start downloading the video ahead of time. */
   preload(): void;
   /** Open full screen and play with sound, from the start. Call from a click handler. */
   play(): void;
 };
 
 /**
- * Full-screen YouTube Short with no visible YouTube UI:
- * controls off, a transparent shield on top (no hover / tap → no title bar or play/pause),
- * a slight zoom that crops YouTube's edge branding, and it closes itself just before the end screen.
+ * Full-screen self-hosted video with no visible player UI at all
+ * (no `controls`, no picture-in-picture, no cast button, no context menu).
+ * Playback starts inside the "Yes" click, so browsers allow it with sound.
  */
 export const SurpriseVideo = forwardRef<SurpriseVideoHandle, { onClose?: () => void }>(function SurpriseVideo(
   { onClose },
   ref,
 ) {
   const overlay = useRef<HTMLDivElement>(null);
-  const mount = useRef<HTMLDivElement>(null);
-  const player = useRef<YTPlayer | null>(null);
-  const ready = useRef<Promise<YTPlayer> | null>(null);
-  const watch = useRef(0);
-  /** true only once the current playback has really started (guards against a stale "ended" on replay) */
-  const armed = useRef(false);
+  const video = useRef<HTMLVideoElement>(null);
+  const closing = useRef(false);
   const [open, setOpen] = useState(false);
   const [needsTap, setNeedsTap] = useState(false);
   // portal target: rendered on <body> so no transformed/clipped ancestor can trap the full-screen layer
   const [portal, setPortal] = useState<HTMLElement | null>(null);
   useEffect(() => setPortal(document.body), []);
 
-  const closing = useRef(false);
-  const close = useCallback(
-    () => {
-      if (closing.current) return;
-      closing.current = true;
-      armed.current = false;
-      window.clearInterval(watch.current);
-      const p = player.current;
-      const finish = () => {
-        // only touch the player once the layer is fully invisible,
-        // so YouTube's pause flash is never seen
-        p?.stopVideo();
-        p?.setVolume(100);
-        closing.current = false;
-        setOpen(false);
-        onClose?.();
-      };
-      if (!overlay.current) return finish();
-      const vol = { v: 100 };
-      gsap.to(vol, { v: 0, duration: 0.5, onUpdate: () => p?.setVolume(vol.v) });
-      gsap.to(overlay.current, { autoAlpha: 0, duration: 0.5, ease: "power2.inOut", onComplete: finish });
-    },
-    [onClose],
-  );
-
-  const ensurePlayer = useCallback(() => {
-    ready.current ??= loadYouTubeApi().then(
-      (YT) =>
-        new Promise<YTPlayer>((resolve) => {
-          const host = document.createElement("div");
-          mount.current!.appendChild(host);
-          const p = new YT.Player(host, {
-            host: "https://www.youtube-nocookie.com",
-            videoId: VIDEO_ID,
-            width: "100%",
-            height: "100%",
-            playerVars: {
-              controls: 0,
-              disablekb: 1,
-              fs: 0,
-              rel: 0,
-              iv_load_policy: 3,
-              playsinline: 1,
-              cc_load_policy: 0,
-              modestbranding: 1,
-              mute: 0, // sound on by default; nothing plays until "Yes" is clicked
-              autoplay: 0,
-              origin: window.location.origin,
-            },
-            events: {
-              onReady: () => resolve(p),
-              onStateChange: (e) => {
-                if (e.data === PLAYING && p.getCurrentTime() < 1) armed.current = true;
-                if (e.data === ENDED && armed.current) close();
-              },
-            },
-          });
-          player.current = p;
-        }),
-    );
-    return ready.current;
-  }, [close]);
-
-
-  const startPlayback = useCallback(
-    (p: YTPlayer) => {
-      armed.current = false;
-      p.seekTo(0, true);
-      p.unMute();
-      p.setVolume(100);
-      p.playVideo();
-      // Sound stays ON. Only if the browser truly refuses to start (never plays, not even buffering)
-      // do we fall back to muted playback with a "Tap for sound" hint. Slow loading never mutes it.
-      const BUFFERING = 3;
-      const started = Date.now();
-      const check = window.setInterval(() => {
-        const state = p.getPlayerState();
-        if (state === PLAYING) {
-          window.clearInterval(check);
-          if (p.isMuted()) {
-            p.unMute();
-            p.setVolume(100);
-          }
-          setNeedsTap(false);
-          if (overlay.current) overlay.current.dataset.muted = String(p.isMuted());
-        } else if (state !== BUFFERING && Date.now() - started > 4000) {
-          window.clearInterval(check);
-          p.mute();
-          p.playVideo();
-          setNeedsTap(true);
-          if (overlay.current) overlay.current.dataset.muted = "true";
-        } else if (state !== BUFFERING) {
-          p.playVideo();
-        }
-      }, 250);
-      // leave a beat before YouTube's end screen can appear
-      window.clearInterval(watch.current);
-      watch.current = window.setInterval(() => {
-        const d = p.getDuration();
-        const t = p.getCurrentTime();
-        if (!armed.current && p.getPlayerState() === PLAYING && t < 1) armed.current = true;
-        if (armed.current && d > 0 && t >= d - 0.35) close();
-      }, 150);
-    },
-    [close],
-  );
+  const close = useCallback(() => {
+    if (closing.current) return;
+    closing.current = true;
+    const v = video.current;
+    const finish = () => {
+      v?.pause();
+      if (v) v.volume = 1;
+      closing.current = false;
+      setOpen(false);
+      setNeedsTap(false);
+      onClose?.();
+    };
+    if (!overlay.current) return finish();
+    // fade picture and sound out together
+    if (v) gsap.to(v, { volume: 0, duration: 0.5 });
+    gsap.to(overlay.current, { autoAlpha: 0, duration: 0.5, ease: "power2.inOut", onComplete: finish });
+  }, [onClose]);
 
   useImperativeHandle(ref, () => ({
-    preload: () => void ensurePlayer(),
+    preload: () => {
+      const v = video.current;
+      if (v && v.preload !== "auto") {
+        v.preload = "auto";
+        v.load();
+      }
+    },
     play: () => {
+      const v = video.current;
+      if (!v) return;
+      closing.current = false;
       setOpen(true);
       if (overlay.current) {
+        gsap.killTweensOf(overlay.current);
         gsap.fromTo(overlay.current, { autoAlpha: 0 }, { autoAlpha: 1, duration: 0.35, ease: "power2.out" });
       }
-      if (player.current && ready.current) {
-        // player already warm: call synchronously inside the click for the best autoplay-with-sound chance
-        startPlayback(player.current);
-      } else {
-        ensurePlayer().then(startPlayback);
-      }
+      gsap.killTweensOf(v);
+      v.currentTime = 0;
+      v.muted = false;
+      v.volume = 1;
+      // called synchronously inside the click → allowed with sound in every major browser
+      v.play()
+        .then(() => setNeedsTap(false))
+        .catch(() => {
+          // extremely strict browser settings only: play muted and offer a tap for sound
+          v.muted = true;
+          v.play().catch(() => {});
+          setNeedsTap(true);
+        });
     },
   }));
 
@@ -220,14 +93,6 @@ export const SurpriseVideo = forwardRef<SurpriseVideoHandle, { onClose?: () => v
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [open, close]);
-
-  useEffect(
-    () => () => {
-      window.clearInterval(watch.current);
-      player.current?.destroy();
-    },
-    [],
-  );
 
   if (!portal) return null;
 
@@ -240,32 +105,35 @@ export const SurpriseVideo = forwardRef<SurpriseVideoHandle, { onClose?: () => v
       aria-hidden={!open}
       className="invisible fixed inset-0 z-[70] grid place-items-center bg-black/90 opacity-0 backdrop-blur-md"
     >
-      <div
-        className="relative aspect-[9/16] h-[min(88svh,calc(92vw*16/9))] overflow-hidden rounded-[20px] bg-black shadow-[var(--shadow-token-3)]"
-        onClick={(e) => e.stopPropagation()}
-      >
-        {/* zoomed slightly so YouTube's edge branding falls outside the rounded frame */}
-        <div ref={mount} className="absolute inset-0 origin-center scale-[1.22] [&_iframe]:h-full [&_iframe]:w-full" />
-        {/* transparent shield: the player never gets hover/taps, so it never shows its UI */}
-        <button
-          type="button"
-          aria-label={needsTap ? "Turn on sound" : "Birthday video playing"}
-          tabIndex={open ? 0 : -1}
-          onClick={() => {
-            const p = player.current;
-            if (p && needsTap) {
-              p.unMute();
-              p.setVolume(100);
-              p.playVideo();
-              setNeedsTap(false);
-            }
-          }}
-          className="absolute inset-0 z-10 cursor-default bg-transparent focus-visible:outline-2 focus-visible:-outline-offset-4 focus-visible:outline-border-strong"
+      <div className="relative aspect-[9/16] h-[min(88svh,calc(92vw*16/9))] overflow-hidden rounded-[20px] bg-black shadow-[var(--shadow-token-3)]">
+        <video
+          ref={video}
+          src={VIDEO_SRC}
+          poster={POSTER_SRC}
+          preload="none"
+          playsInline
+          disablePictureInPicture
+          disableRemotePlayback
+          controlsList="nodownload nofullscreen noremoteplayback noplaybackrate"
+          onEnded={close}
+          onContextMenu={(e) => e.preventDefault()}
+          className="pointer-events-none h-full w-full object-cover select-none"
         />
         {needsTap && (
-          <p className="pointer-events-none absolute inset-x-0 bottom-6 z-20 text-center text-[13.94px] text-text-primary">
+          <button
+            type="button"
+            onClick={() => {
+              const v = video.current;
+              if (!v) return;
+              v.muted = false;
+              v.volume = 1;
+              v.play().catch(() => {});
+              setNeedsTap(false);
+            }}
+            className="absolute inset-0 grid cursor-pointer items-end justify-center bg-transparent pb-6 text-[13.94px] text-text-primary focus-visible:outline-2 focus-visible:-outline-offset-4 focus-visible:outline-border-strong"
+          >
             Tap for sound
-          </p>
+          </button>
         )}
       </div>
     </div>,
