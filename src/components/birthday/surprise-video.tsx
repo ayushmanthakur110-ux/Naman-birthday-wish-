@@ -31,7 +31,6 @@ export const SurpriseVideo = forwardRef<SurpriseVideoHandle, { onClose?: () => v
   const video = useRef<HTMLVideoElement>(null);
   const closing = useRef(false);
   const [open, setOpen] = useState(false);
-  const [needsTap, setNeedsTap] = useState(false);
   // portal target: rendered on <body> so no transformed/clipped ancestor can trap the full-screen layer
   const [portal, setPortal] = useState<HTMLElement | null>(null);
   useEffect(() => setPortal(document.body), []);
@@ -45,7 +44,6 @@ export const SurpriseVideo = forwardRef<SurpriseVideoHandle, { onClose?: () => v
       if (v) v.volume = 1;
       closing.current = false;
       setOpen(false);
-      setNeedsTap(false);
       onClose?.();
     };
     if (!overlay.current) return finish();
@@ -76,14 +74,11 @@ export const SurpriseVideo = forwardRef<SurpriseVideoHandle, { onClose?: () => v
       v.muted = false;
       v.volume = 1;
       // called synchronously inside the click → allowed with sound in every major browser
-      v.play()
-        .then(() => setNeedsTap(false))
-        .catch(() => {
-          // extremely strict browser settings only: play muted and offer a tap for sound
-          v.muted = true;
-          v.play().catch(() => {});
-          setNeedsTap(true);
-        });
+      v.play().catch(() => {
+        // only under very strict browser settings: keep playing (muted) rather than freeze — no prompt
+        v.muted = true;
+        v.play().catch(() => {});
+      });
     },
   }));
 
@@ -119,22 +114,6 @@ export const SurpriseVideo = forwardRef<SurpriseVideoHandle, { onClose?: () => v
           onContextMenu={(e) => e.preventDefault()}
           className="pointer-events-none h-full w-full object-cover select-none"
         />
-        {needsTap && (
-          <button
-            type="button"
-            onClick={() => {
-              const v = video.current;
-              if (!v) return;
-              v.muted = false;
-              v.volume = 1;
-              v.play().catch(() => {});
-              setNeedsTap(false);
-            }}
-            className="absolute inset-0 grid cursor-pointer items-end justify-center bg-transparent pb-6 text-[13.94px] text-text-primary focus-visible:outline-2 focus-visible:-outline-offset-4 focus-visible:outline-border-strong"
-          >
-            Tap for sound
-          </button>
-        )}
       </div>
     </div>,
     portal,
