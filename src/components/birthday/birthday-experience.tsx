@@ -283,7 +283,10 @@ export function BirthdayExperience() {
                   src={m.src}
                   alt={m.alt}
                   placeholder="blur"
-                  sizes="(min-width: 1024px) 420px, 92vw"
+                  // load all four up front: the sideways-scrolling strip reaches the last card
+                  // before lazy loading would have finished, leaving it on the blurred placeholder
+                  loading="eager"
+                  sizes="(min-width: 1024px) 460px, 92vw"
                   className="absolute inset-y-0 -left-[6%] h-full w-[112%] max-w-none object-cover"
                 />
               </div>
