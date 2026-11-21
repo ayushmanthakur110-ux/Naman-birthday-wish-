@@ -63,7 +63,7 @@ const PLAYING = 1;
 const ENDED = 0;
 
 export type SurpriseVideoHandle = {
-  /** Warm the player up ahead of time (muted, paused, off-screen). */
+  /** Warm the player up ahead of time (paused, off-screen). */
   preload(): void;
   /** Open full screen and play with sound, from the start. Call from a click handler. */
   play(): void;
@@ -86,7 +86,9 @@ export const SurpriseVideo = forwardRef<SurpriseVideoHandle, { onClose?: () => v
   /** true only once the current playback has really started (guards against a stale "ended" on replay) */
   const armed = useRef(false);
   const [open, setOpen] = useState(false);
-  const [needsTap, setNeedsTap] = useState(false);
+  /** true once the video is really playing with sound; until then taps go straight to the player */
+  const [live, setLive] = useState(false);
+  const nudge = useRef(0);
   // portal target: rendered on <body> so no transformed/clipped ancestor can trap the full-screen layer
   const [portal, setPortal] = useState<HTMLElement | null>(null);
   useEffect(() => setPortal(document.body), []);
@@ -98,6 +100,7 @@ export const SurpriseVideo = forwardRef<SurpriseVideoHandle, { onClose?: () => v
       closing.current = true;
       armed.current = false;
       window.clearInterval(watch.current);
+      window.clearInterval(nudge.current);
       const p = player.current;
       const finish = () => {
         // only touch the player once the layer is fully invisible,
@@ -162,29 +165,28 @@ export const SurpriseVideo = forwardRef<SurpriseVideoHandle, { onClose?: () => v
       p.unMute();
       p.setVolume(100);
       p.playVideo();
-      // Sound stays ON. Only if the browser truly refuses to start (never plays, not even buffering)
-      // do we fall back to muted playback with a "Tap for sound" hint. Slow loading never mutes it.
+      // Sound is always ON — the video is never muted and there is no "tap for sound" prompt.
+      // Keep nudging the player (unmuted) until it is really playing with sound.
       const BUFFERING = 3;
       const started = Date.now();
-      const check = window.setInterval(() => {
+      setLive(false);
+      window.clearInterval(nudge.current);
+      nudge.current = window.setInterval(() => {
         const state = p.getPlayerState();
         if (state === PLAYING) {
-          window.clearInterval(check);
           if (p.isMuted()) {
             p.unMute();
             p.setVolume(100);
+          } else {
+            window.clearInterval(nudge.current);
+            setLive(true);
+            return;
           }
-          setNeedsTap(false);
-          if (overlay.current) overlay.current.dataset.muted = String(p.isMuted());
-        } else if (state !== BUFFERING && Date.now() - started > 4000) {
-          window.clearInterval(check);
-          p.mute();
-          p.playVideo();
-          setNeedsTap(true);
-          if (overlay.current) overlay.current.dataset.muted = "true";
         } else if (state !== BUFFERING) {
+          p.unMute();
           p.playVideo();
         }
+        if (Date.now() - started > 20000) window.clearInterval(nudge.current);
       }, 250);
       // leave a beat before YouTube's end screen can appear
       window.clearInterval(watch.current);
@@ -224,6 +226,7 @@ export const SurpriseVideo = forwardRef<SurpriseVideoHandle, { onClose?: () => v
   useEffect(
     () => () => {
       window.clearInterval(watch.current);
+      window.clearInterval(nudge.current);
       player.current?.destroy();
     },
     [],
@@ -246,27 +249,12 @@ export const SurpriseVideo = forwardRef<SurpriseVideoHandle, { onClose?: () => v
       >
         {/* zoomed slightly so YouTube's edge branding falls outside the rounded frame */}
         <div ref={mount} className="absolute inset-0 origin-center scale-[1.22] [&_iframe]:h-full [&_iframe]:w-full" />
-        {/* transparent shield: the player never gets hover/taps, so it never shows its UI */}
-        <button
-          type="button"
-          aria-label={needsTap ? "Turn on sound" : "Birthday video playing"}
-          tabIndex={open ? 0 : -1}
-          onClick={() => {
-            const p = player.current;
-            if (p && needsTap) {
-              p.unMute();
-              p.setVolume(100);
-              p.playVideo();
-              setNeedsTap(false);
-            }
-          }}
-          className="absolute inset-0 z-10 cursor-default bg-transparent focus-visible:outline-2 focus-visible:-outline-offset-4 focus-visible:outline-border-strong"
+        {/* transparent shield: once playing, the player never gets hover/taps, so it never shows its UI.
+            Until then it lets taps through, so a phone that blocked the start can begin (with sound) on a tap. */}
+        <div
+          aria-hidden="true"
+          className={`absolute inset-0 z-10 bg-transparent ${live ? "" : "pointer-events-none"}`}
         />
-        {needsTap && (
-          <p className="pointer-events-none absolute inset-x-0 bottom-6 z-20 text-center text-[13.94px] text-text-primary">
-            Tap for sound
-          </p>
-        )}
       </div>
     </div>,
     portal,
